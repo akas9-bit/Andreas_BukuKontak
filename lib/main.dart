@@ -1,159 +1,237 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const BukuKontakApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class BukuKontakApp extends StatelessWidget {
+  const BukuKontakApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Buku Kontak',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const BerandaPage(),
+    );
+  }
+}
+
+// Model data untuk kontak
+class KontakModel {
+  final String nama;
+  final String email;
+  final String telepon;
+
+  KontakModel({required this.nama, required this.email, required this.telepon});
+}
+
+class BerandaPage extends StatefulWidget {
+  const BerandaPage({super.key});
+
+  @override
+  State<BerandaPage> createState() => _BerandaPageState();
+}
+
+class _BerandaPageState extends State<BerandaPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final List<KontakModel> _daftarKontak = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Inisialisasi TabController dengan 2 tab
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  // Fungsi untuk menambah kontak baru
+  void _tambahKontak(String nama, String email, String telepon) {
+    setState(() {
+      _daftarKontak.add(
+        KontakModel(nama: nama, email: email, telepon: telepon),
+      );
+    });
+  }
+
+  // Fungsi untuk menghapus kontak berdasarkan index
+  void _hapusKontak(int index) {
+    setState(() {
+      _daftarKontak.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        title: const Text('BUKU KONTAK'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48.0),
+          child: Container(
+            color: Colors.blue,
+            child: TabBar(
+              controller: _tabController, // Hubungkan controller di sini
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
+              tabs: const [
+                Tab(icon: Icon(Icons.person), text: 'Kontak'),
+                Tab(icon: Icon(Icons.star), text: 'Favorit'),
+              ],
+            ),
+          ),
+        ),
       ),
-      // Menggunakan Named Routes
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const HomePage(),
-        '/tambah': (context) => const TambahKontakPage(),
-        '/tentang': (context) => const TentangPage(),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blue),
+              child: Text(
+                'BUKU KONTAK',
+                style: TextStyle(color: Colors.white, fontSize: 20),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.book),
+              title: const Text('Kontak'),
+              onTap: () {
+                Navigator.pop(context); // Tutup drawer
+                _tabController.animateTo(0); // Pindah ke tab Kontak (index 0)
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text('Tambah Kontak'),
+              onTap: () async {
+                Navigator.pop(context);
+                final hasilBaru = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TambahKontakPage(),
+                  ),
+                );
+                if (hasilBaru != null && hasilBaru is KontakModel) {
+                  _tambahKontak(
+                    hasilBaru.nama,
+                    hasilBaru.email,
+                    hasilBaru.telepon,
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.star),
+              title: const Text('Favorit'),
+              onTap: () {
+                Navigator.pop(context); // Tutup drawer
+                _tabController.animateTo(1); // Pindah ke tab Favorit (index 1)
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info),
+              title: const Text('Tentang'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TentangPage()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController, // Hubungkan controller di sini
+        children: [
+          KontakPage(daftarKontak: _daftarKontak, onHapus: _hapusKontak),
+          const FavoritPage(),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final hasilBaru = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const TambahKontakPage()),
+          );
+          if (hasilBaru != null && hasilBaru is KontakModel) {
+            _tambahKontak(hasilBaru.nama, hasilBaru.email, hasilBaru.telepon);
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class KontakPage extends StatelessWidget {
+  final List<KontakModel> daftarKontak;
+  final Function(int) onHapus;
+
+  const KontakPage({
+    super.key,
+    required this.daftarKontak,
+    required this.onHapus,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (daftarKontak.isEmpty) {
+      return const Center(
+        child: Text(
+          'Belum ada kontak',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: daftarKontak.length,
+      itemBuilder: (context, index) {
+        final kontak = daftarKontak[index];
+        return ListTile(
+          leading: const Icon(Icons.person),
+          title: Text(kontak.nama),
+          subtitle: Text('${kontak.email}\n${kontak.telepon}'),
+          isThreeLine: true,
+          trailing: IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: () {
+              onHapus(index);
+            },
+          ),
+        );
       },
     );
   }
 }
 
-// ---------------------------------------------------
-// HALAMAN UTAMA (Beranda dengan TabBar & Drawer)
-// ---------------------------------------------------
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  // Daftar kontak awal (Contoh data)
-  List<Map<String, String>> kontakList = [
-    {
-      'nama': 'Annisa Kusumastuti',
-      'email': 'nisa@gmail.com',
-      'hp': '0895421903057',
-    }
-  ];
+class FavoritPage extends StatelessWidget {
+  const FavoritPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('BUKU KONTAK'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.account_circle), text: 'Kontak'),
-              Tab(icon: Icon(Icons.star), text: 'Favorit'),
-            ],
-          ),
-        ),
-        // NAVIGATION DRAWER
-        drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              const DrawerHeader(
-                decoration: BoxDecoration(color: Colors.blue),
-                child: Text(
-                  'BUKU KONTAK',
-                  style: TextStyle(color: Colors.white, fontSize: 24),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.contacts),
-                title: const Text('Kontak'),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.add),
-                title: const Text('Tambah Kontak'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final result = await Navigator.pushNamed(context, '/tambah');
-                  if (result != null && result is Map<String, String>) {
-                    setState(() {
-                      kontakList.add(result);
-                    });
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.star),
-                title: const Text('Favorit'),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.info),
-                title: const Text('Tentang'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/tentang');
-                },
-              ),
-            ],
-          ),
-        ),
-        // TAB BAR VIEW
-        body: TabBarView(
-          children: [
-            // Tab 1: Daftar Kontak
-            kontakList.isEmpty
-                ? const Center(child: Text('Belum ada kontak'))
-                : ListView.builder(
-                    itemCount: kontakList.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        leading: const Icon(Icons.person),
-                        title: Text(kontakList[index]['nama']!),
-                        subtitle: Text(
-                          '${kontakList[index]['email']}\n${kontakList[index]['hp']}',
-                        ),
-                      );
-                    },
-                  ),
-            // Tab 2: Favorit
-            const Center(
-              child: Text('Belum ada kontak favorit'),
-            ),
-          ],
-        ),
-        // FLOATING ACTION BUTTON
-        floatingActionButton: FloatingActionButton(
-          onPressed: () async {
-            final result = await Navigator.pushNamed(context, '/tambah');
-            if (result != null && result is Map<String, String>) {
-              setState(() {
-                kontakList.add(result);
-              });
-            }
-          },
-          child: const Icon(Icons.add),
-        ),
+    return const Center(
+      child: Text(
+        'Belum ada kontak favorit',
+        style: TextStyle(fontSize: 16, color: Colors.grey),
       ),
     );
   }
 }
 
-// ---------------------------------------------------
-// HALAMAN TAMBAH KONTAK
-// ---------------------------------------------------
 class TambahKontakPage extends StatefulWidget {
   const TambahKontakPage({super.key});
 
@@ -162,14 +240,16 @@ class TambahKontakPage extends StatefulWidget {
 }
 
 class _TambahKontakPageState extends State<TambahKontakPage> {
-  final _namaController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _hpController = TextEditingController();
+  final TextEditingController _namaController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _teleponController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
         title: const Text('Tambah Kontak'),
       ),
       body: Padding(
@@ -185,19 +265,25 @@ class _TambahKontakPageState extends State<TambahKontakPage> {
               decoration: const InputDecoration(labelText: 'Email'),
             ),
             TextField(
-              controller: _hpController,
+              controller: _teleponController,
               decoration: const InputDecoration(labelText: 'No Handphone'),
               keyboardType: TextInputType.phone,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             ElevatedButton(
               onPressed: () {
-                // Mengirim data kembali ke HomePage
-                Navigator.pop(context, {
-                  'nama': _namaController.text,
-                  'email': _emailController.text,
-                  'hp': _hpController.text,
-                });
+                final nama = _namaController.text;
+                final email = _emailController.text;
+                final telepon = _teleponController.text;
+
+                if (nama.isNotEmpty) {
+                  Navigator.pop(
+                    context,
+                    KontakModel(nama: nama, email: email, telepon: telepon),
+                  );
+                } else {
+                  Navigator.pop(context);
+                }
               },
               child: const Text('Simpan'),
             ),
@@ -208,9 +294,6 @@ class _TambahKontakPageState extends State<TambahKontakPage> {
   }
 }
 
-// ---------------------------------------------------
-// HALAMAN TENTANG (Profil Diri)
-// ---------------------------------------------------
 class TentangPage extends StatelessWidget {
   const TentangPage({super.key});
 
@@ -218,27 +301,30 @@ class TentangPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
         title: const Text('Tentang'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            // Placeholder Foto Menggunakan AssetImage
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: Colors.orange,
+          children: [
+            const CircleAvatar(
+              radius: 50,
               backgroundImage: AssetImage('assets/foto_profil.png'),
             ),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'Andreas Dwi Prakasa',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 5),
-            Text('XII RPL B'),
-            SizedBox(height: 5),
-            Text('SMK Negeri 5 Surakarta'),
+            const SizedBox(height: 8),
+            const Text('XII RPL B', style: TextStyle(fontSize: 16)),
+            const SizedBox(height: 4),
+            const Text(
+              'SMK Negeri 5 Surakarta',
+              style: TextStyle(fontSize: 16),
+            ),
           ],
         ),
       ),
